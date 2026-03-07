@@ -62,3 +62,31 @@ def validate_bins(bins: int) -> int:
     if not isinstance(bins, int) or bins < 1:
         raise ValueError(f"bins must be a positive integer, got {bins!r}")
     return bins
+
+
+def validate_bar_data(data: object) -> list[list[float]]:
+    """Normalize bar data to list[list[float]] (list of series).
+
+    Accepts:
+        - A single array of numbers: [3, 5, 2] → one series
+        - An iterable of arrays: [[1, 3], [2, 4]] → multiple series
+    """
+    try:
+        items = list(data)  # type: ignore[arg-type]
+    except TypeError:
+        raise ValueError("data must be an iterable")
+    if not items:
+        raise ValueError("empty data")
+
+    if isinstance(items[0], (int, float)):
+        return [validate_numbers(items)]
+
+    series = [validate_numbers(arr, f"data[{i}]") for i, arr in enumerate(items)]
+    n = len(series[0])
+    for i, s in enumerate(series[1:], 1):
+        if len(s) != n:
+            raise ValueError(
+                f"all series must have the same length "
+                f"(data[0] has {n}, data[{i}] has {len(s)})"
+            )
+    return series
