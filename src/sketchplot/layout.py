@@ -182,3 +182,86 @@ def assemble_hist_plot(
     lines.append("".join(label_line).rstrip())
 
     return "\n".join(lines)
+
+
+def assemble_bar_plot(
+    canvas: Canvas,
+    n_groups: int,
+    n_series: int,
+    y_scale: Scale,
+    cs: CharSet,
+    title: str | None = None,
+    bar_width: int = 2,
+    inner_gap: int = 0,
+    outer_gap: int = 1,
+) -> str:
+    """Assemble bar plot with axes and group-index labels."""
+    y_ticks = y_scale.ticks(3)
+    y_labels = [_format_tick(v) for v in y_ticks]
+    y_label_width = max(len(lbl) for lbl in y_labels)
+    y_tick_pixels = [y_scale.apply(v) for v in y_ticks]
+
+    canvas_str = canvas.to_string()
+    canvas_lines = canvas_str.split("\n")
+
+    lines: list[str] = []
+
+    # Title
+    if title is not None:
+        total_width = y_label_width + 1 + canvas.width
+        if len(title) > total_width:
+            title = title[: total_width - 1] + "\u2026"
+        padding = (total_width - len(title)) // 2
+        lines.append(" " * padding + title)
+
+    # Canvas rows with y-axis
+    for row_idx, canvas_line in enumerate(canvas_lines):
+        y_val = canvas.height - 1 - row_idx
+
+        y_label_str = ""
+        tick_char = cs.vertical
+        for i, tp in enumerate(y_tick_pixels):
+            if tp == y_val:
+                y_label_str = y_labels[i]
+                tick_char = cs.tick_y
+                break
+
+        padded_label = y_label_str.rjust(y_label_width)
+        lines.append(f"{padded_label}{tick_char}{canvas_line}")
+
+    # X-axis line
+    x_axis_prefix = " " * y_label_width + cs.corner_bl
+    lines.append(x_axis_prefix + cs.horizontal * canvas.width)
+
+    # X-axis labels: group indices (1-based) centered under each group
+    group_width = n_series * bar_width + max(0, n_series - 1) * inner_gap
+    label_line = [" "] * (y_label_width + 1 + canvas.width)
+
+    n_labels = min(n_groups, max(3, canvas.width // 12))
+    if n_groups == 1:
+        label_indices = [0]
+    elif n_labels <= 1:
+        label_indices = [0]
+    else:
+        label_indices = [
+            round(i * (n_groups - 1) / (n_labels - 1)) for i in range(n_labels)
+        ]
+    label_indices = sorted(set(label_indices))
+
+    last_end = -1
+    for idx in label_indices:
+        lbl = str(idx + 1)
+        px = idx * (group_width + outer_gap) + group_width // 2
+        pos = y_label_width + 1 + px - len(lbl) // 2
+        pos = max(0, pos)
+        if pos <= last_end:
+            continue
+        for j, ch in enumerate(lbl):
+            p = pos + j
+            if p < len(label_line):
+                label_line[p] = ch
+        last_end = pos + len(lbl)
+
+    lines.append("".join(label_line).rstrip())
+
+    return "\n".join(lines)

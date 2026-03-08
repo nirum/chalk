@@ -109,3 +109,38 @@ def draw_bars(
                 canvas.set(x, y, cs.block_full)
             if has_half:
                 canvas.set(x, full_rows, cs.block_half)
+
+
+def draw_bar_groups(
+    canvas: Canvas,
+    series: list[list[float]],
+    max_val: float,
+    cs: CharSet,
+    bar_width: int = 2,
+    inner_gap: int = 0,
+    outer_gap: int = 1,
+) -> None:
+    """Draw grouped bars for a list of series on the canvas."""
+    n_series = len(series)
+    n_groups = len(series[0])
+    group_width = n_series * bar_width + max(0, n_series - 1) * inner_gap
+
+    for g in range(n_groups):
+        x_group = g * (group_width + outer_gap)
+        for s, serie in enumerate(series):
+            val = serie[g]
+            x_start = x_group + s * (bar_width + inner_gap)
+            if max_val == 0 or val <= 0:
+                bar_height_exact = 0.0
+            else:
+                bar_height_exact = val / max_val * canvas.height
+
+            full_rows = int(bar_height_exact)
+            has_half = bar_height_exact - full_rows >= 0.5
+
+            for bx in range(bar_width):
+                x = x_start + bx
+                for y in range(full_rows):
+                    canvas.set(x, y, cs.block_full)
+                if has_half:
+                    canvas.set(x, full_rows, cs.block_half)
